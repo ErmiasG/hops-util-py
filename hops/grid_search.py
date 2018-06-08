@@ -58,7 +58,12 @@ def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
 
     max_val, max_hp, min_val, min_hp, avg = _get_best(args_dict, num_executions, arg_names, arg_count, hdfs_appid_dir, run_id)
 
+    param_combination = ""
+    best_val = ""
+
     if direction == 'max':
+        param_combination = max_hp
+        best_val = str(max_val)
         results = '\n------ Grid search results ------ direction(' + direction + ') \n' \
           'BEST combination ' + max_hp + ' -- metric ' + str(max_val) + '\n' \
           'WORST combination ' + min_hp + ' -- metric ' + str(min_val) + '\n' \
@@ -67,6 +72,8 @@ def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
         write_result(hdfs_runid_dir, results)
         print(results)
     elif direction == 'min':
+        param_combination = min_hp
+        best_val = str(min_val)
         results = '\n------ Grid search results ------ direction(' + direction + ') \n' \
         'BEST combination ' + min_hp + ' -- metric ' + str(min_val) + '\n' \
         'WORST combination ' + max_hp + ' -- metric ' + str(max_val) + '\n' \
@@ -80,7 +87,7 @@ def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
 
     run_id += 1
 
-    return hdfs_runid_dir
+    return hdfs_runid_dir, param_combination, best_val
 
 
 def write_result(runid_dir, string):

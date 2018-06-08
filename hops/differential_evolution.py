@@ -213,7 +213,7 @@ class DifferentialEvolution:
         for indiv in population:
             parsed_back_population.append(self._parse_back(indiv))
 
-        return parsed_back_population, self._scores
+        return new_gen_best_param, new_gen_best
 
     # define bounds of each individual depending on type
     def _individual_representation(self):
@@ -460,11 +460,11 @@ def _search(spark, function, search_dict, direction = 'max', generations=10, pop
 
     root_dir = hopshdfs.project_path() + "/Logs/TensorFlow/" + str(spark.sparkContext.applicationId) + "/differential_evolution/run." + str(run_id)
 
-    diff_evo.solve(root_dir)
+    best_param, best_metric = diff_evo.solve(root_dir)
 
     run_id += 1
 
-    return str(root_dir)
+    return str(root_dir), best_param, best_metric
 
 
 def _evolutionary_launch(spark_session, map_fun, args_dict=None):

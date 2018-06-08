@@ -9,6 +9,27 @@ import signal
 from ctypes import cdll
 import itertools
 import socket
+import json
+from datetime import datetime
+from hops import hdfs
+from hops import version
+
+try:
+    import tensorflow
+except:
+    pass
+
+try:
+    import http.client as http
+except ImportError:
+    import httplib as http
+
+def _get_elastic_endpoint():
+    elastic_endpoint = os.environ['ELASTIC_ENDPOINT']
+    host, port = elastic_endpoint.split(':')
+    return host, port
+
+host, port = _get_elastic_endpoint()
 
 def _find_in_path(path, file):
     """Find a file in a given path string."""
@@ -58,9 +79,6 @@ def num_param_servers(spark):
     sc = spark.sparkContext
     return int(sc._conf.get("spark.tensorflow.num.ps"))
 
-def csv_to_args(path):
-    print("TODO")
-
 def grid_params(dict):
     """ Generate all possible combinations (cartesian product) of the hyperparameter values
     Returns:
@@ -97,13 +115,57 @@ def time_diff(task_start, task_end):
     if seconds < 60:
         return str(seconds) + ' seconds'
     elif seconds == 60 or seconds <= 3600:
-        minutes = seconds / 60
-        return str(minutes) + ' minutes, ' + str(seconds % 60) + ' seconds'
+        minutes = float(seconds) / 60.0
+        return str(minutes) + ' minutes, ' + str((minutes % 1) * 60) + ' seconds'
+    elif seconds > 3600:
+        hours = float(seconds) / 3600.0
+        minutes = (hours % 1) * 60
+        return str(int(hours)) + ' hours, ' + str(minutes) + ' minutes'
     else:
-        hours = seconds / 3600
-        minutes = seconds % 3600
-        return str(hours) + ' hours, ' + str(minutes) + ' minutes'
+        return 'unknown time'
+
+def put_elastic(project, appid, elastic_id, json):
+    headers = {'Content-type': 'application/json'}
+
+    connection = http.HTTPConnection(host, int(port))
+    connection.request('PUT', '/' + project + "_experiments/experiments/" + appid + "_" + str(elastic_id),
+                       json, headers)
+    connection.getresponse()
 
 
-def to_json():
-    return ""
+def populate_experiment(sc, model_name, module, function):
+    return json.dumps({'project': hdfs.project_name(),
+                       'user': os.environ['HOPSWORKS_USER'],
+                       'name': model_name,
+                       'module': module,
+                       'function': function,
+                       'status':'RUNNING',
+                       'start': datetime.now().isoformat(),
+                       'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
+                       'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
+                       'executors': str(sc._conf.get("spark.executor.instances"))})
+
+def finalize_experiment(experiment_json, hyperparameter, metric):
+    experiment_json = json.loads(experiment_json)
+    experiment_json['metric'] = metric
+    experiment_json['hyperparameter'] = hyperparameter
+    experiment_json['finished'] = datetime.now().isoformat()
+    experiment_json['status'] = "SUCEEDED"
+    experiment_json = _add_version(experiment_json)
+
+    return json.dumps(experiment_json)
+
+def _add_version(experiment_json):
+    experiment_json['spark'] = os.environ['SPARK_VERSION']
+
+    try:
+        experiment_json['tensorflow'] = tensorflow.__version__
+    except:
+        experiment_json['tensorflow'] = os.environ['TENSORFLOW_VERSION']
+
+    experiment_json['hops_py'] = version.__version__
+    experiment_json['hops'] = os.environ['HADOOP_VERSION']
+    experiment_json['hopsworks'] = os.environ['HOPSWORKS_VERSION']
+    experiment_json['cuda'] = os.environ['CUDA_VERSION']
+    experiment_json['kafka'] = os.environ['KAFKA_VERSION']
+    return experiment_json
