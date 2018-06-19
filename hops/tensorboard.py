@@ -21,10 +21,15 @@ debugger_endpoint = None
 pypath = None
 tb_path = None
 
+def setLocalDir(directory=None):
+    global events_logdir
+    events_logdir=directory
+
 def register(hdfs_exec_dir, endpoint_dir, exec_num):
 
     global events_logdir
-    events_logdir = hdfs_exec_dir
+    if events_logdir != None:
+        events_logdir = hdfs_exec_dir
 
     global tb_pid
 
