@@ -39,12 +39,14 @@ def launch(spark, map_fun, args_dict=None, name='no-name'):
         sc = spark.sparkContext
         app_id = str(sc.applicationId)
 
+        launcher.run_id = launcher.run_id + 1
+
         experiment_json = None
-        experiment_json = util.populate_experiment(spark, name, 'experiment', 'launcher')
+        experiment_json = util.populate_experiment(spark, name, 'experiment', 'launcher', launcher.get_logdir(app_id))
 
         util.put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
 
-        tensorboard_logdir = launcher.launch(spark, map_fun, args_dict, name)
+        tensorboard_logdir = launcher.launch(spark, map_fun, args_dict, name, experiment_json)
 
         experiment_json = util.finalize_experiment(experiment_json, '', '')
 
@@ -78,8 +80,10 @@ def evolutionary_search(spark, objective_function, search_dict, direction = 'max
         sc = spark.sparkContext
         app_id = str(sc.applicationId)
 
+        diff_evo.run_id = diff_evo.run_id + 1
+
         experiment_json = None
-        experiment_json = util.populate_experiment(spark, name, 'experiment', 'evolutionary_search')
+        experiment_json = util.populate_experiment(spark, name, 'experiment', 'evolutionary_search', diff_evo.get_logdir(app_id))
 
         util.put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
 
@@ -116,7 +120,10 @@ def grid_search(spark, map_fun, args_dict, direction='max', name='no-name'):
         sc = spark.sparkContext
         app_id = str(sc.applicationId)
 
-        experiment_json = util.populate_experiment(spark, name, 'experiment', 'grid_search')
+        gs.run_id = gs.run_id + 1
+
+        experiment_json = util.populate_experiment(spark, name, 'experiment', 'grid_search', gs.get_logdir(app_id))
+
         util.put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
 
         grid_params = util.grid_params(args_dict)

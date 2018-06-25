@@ -25,10 +25,10 @@ def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
       :map_fun: The TensorFlow function to run
       :args_dict: (optional) A dictionary containing hyperparameter values to insert as arguments for each TensorFlow job
     """
+    global run_id
     sc = spark_session.sparkContext
     app_id = str(sc.applicationId)
     num_executions = 1
-    global run_id
 
     if direction != 'max' and direction != 'min':
         raise ValueError('Invalid direction ' + direction +  ', must be max or min')
@@ -44,7 +44,6 @@ def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
     nodeRDD = sc.parallelize(range(num_executions), num_executions)
 
     #Force execution on executor, since GPU is located on executor
-
     job_start = datetime.datetime.now()
     nodeRDD.foreachPartition(_prepare_func(app_id, run_id, map_fun, args_dict))
     job_end = datetime.datetime.now()
@@ -85,9 +84,11 @@ def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
 
     print('\nSee /Logs/TensorFlow/' + app_id + '/run.' + str(run_id) + ' for summary of results, logfile and TensorBoard log directory')
 
-    run_id += 1
-
     return hdfs_runid_dir, param_combination, best_val
+
+def get_logdir(app_id):
+    return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id+ '/grid_search/run.' + str(run_id)
+
 
 
 def write_result(runid_dir, string):

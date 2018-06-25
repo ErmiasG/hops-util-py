@@ -14,8 +14,11 @@ run_id = 0
 
 def launch(spark, map_fun, args_dict=None, name='no-name'):
 
+    global run_id
+
     sc = spark.sparkContext
     app_id = str(sc.applicationId)
+
 
     if args_dict == None:
         num_executions = 1
@@ -31,12 +34,14 @@ def launch(spark, map_fun, args_dict=None, name='no-name'):
     nodeRDD = sc.parallelize(range(num_executions), num_executions)
 
     #Force execution on executor, since GPU is located on executor    global run_id
-    global run_id
     nodeRDD.foreachPartition(_prepare_func(app_id, run_id, map_fun, args_dict))
 
     print('Finished TensorFlow job \n')
     print('Make sure to check /Logs/TensorFlow/' + app_id + '/run.' + str(run_id) + ' for logfile and contents of TensorBoard logdir')
 
+    return 'hdfs:///Projects/' + hopshdfs.project_name() + '/Logs/TensorFlow/' + app_id + '/launcher/run.' +  str(run_id)
+
+def get_logdir(app_id):
     return 'hdfs:///Projects/' + hopshdfs.project_name() + '/Logs/TensorFlow/' + app_id + '/launcher/run.' +  str(run_id)
 
 

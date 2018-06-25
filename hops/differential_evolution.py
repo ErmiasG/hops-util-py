@@ -410,6 +410,8 @@ class DifferentialEvolution:
 
 def _search(spark, function, search_dict, direction = 'max', generations=10, popsize=10, mutation=0.5, crossover=0.7, cleanup_generations=False):
 
+    global run_id
+
     global spark_session
     spark_session = spark
 
@@ -418,8 +420,6 @@ def _search(spark, function, search_dict, direction = 'max', generations=10, pop
 
     global cleanup
     cleanup = cleanup_generations
-
-    global run_id
 
     argcount = six.get_function_code(function).co_argcount
     arg_names = six.get_function_code(function).co_varnames
@@ -462,9 +462,10 @@ def _search(spark, function, search_dict, direction = 'max', generations=10, pop
 
     best_param, best_metric = diff_evo.solve(root_dir)
 
-    run_id += 1
-
     return str(root_dir), best_param, best_metric
+
+def get_logdir(app_id):
+    return hopshdfs.project_path() + "/Logs/TensorFlow/" + app_id + "/differential_evolution/run." + str(run_id)
 
 
 def _evolutionary_launch(spark_session, map_fun, args_dict=None):

@@ -133,7 +133,7 @@ def put_elastic(project, appid, elastic_id, json):
     connection.getresponse()
 
 
-def populate_experiment(sc, model_name, module, function):
+def populate_experiment(sc, model_name, module, function, logdir):
     return json.dumps({'project': hdfs.project_name(),
                        'user': os.environ['HOPSWORKS_USER'],
                        'name': model_name,
@@ -143,7 +143,8 @@ def populate_experiment(sc, model_name, module, function):
                        'start': datetime.now().isoformat(),
                        'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
                        'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
-                       'executors': str(sc._conf.get("spark.executor.instances"))})
+                       'executors': str(sc._conf.get("spark.executor.instances")),
+                       'logdir': logdir})
 
 def finalize_experiment(experiment_json, hyperparameter, metric):
     experiment_json = json.loads(experiment_json)
