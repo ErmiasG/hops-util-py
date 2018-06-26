@@ -46,7 +46,7 @@ def launch(spark, map_fun, args_dict=None, name='no-name'):
 
         util.put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
 
-        tensorboard_logdir = launcher.launch(sc, map_fun, args_dict, name, experiment_json)
+        tensorboard_logdir = launcher.launch(sc, map_fun, args_dict, name)
 
         experiment_json = util.finalize_experiment(experiment_json, '', '')
 
