@@ -17,7 +17,7 @@ import datetime
 
 run_id = 0
 
-def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
+def _grid_launch(sc, map_fun, args_dict, direction='max'):
     """ Run the wrapper function with each hyperparameter combination as specified by the dictionary
 
     Args:
@@ -26,7 +26,6 @@ def _grid_launch(spark_session, map_fun, args_dict, direction='max'):
       :args_dict: (optional) A dictionary containing hyperparameter values to insert as arguments for each TensorFlow job
     """
     global run_id
-    sc = spark_session.sparkContext
     app_id = str(sc.applicationId)
     num_executions = 1
 

@@ -12,11 +12,10 @@ import os
 run_id = 0
 
 
-def launch(spark, map_fun, args_dict=None, name='no-name'):
+def launch(sc, map_fun, args_dict=None, name='no-name'):
 
     global run_id
 
-    sc = spark.sparkContext
     app_id = str(sc.applicationId)
 
 
