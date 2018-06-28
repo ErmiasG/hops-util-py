@@ -42,12 +42,49 @@ def launch(spark_session, notebook, args):
 
     server = coordination_server.Server(conf_num)
     server_addr = server.start()
+    print("Server address: ", server_addr)
 
     # Force execution on executor, since GPU is located on executor
-    nodeRDD.foreachPartition(prepare_func(app_id, exec_mem, run_id, notebook, server_addr, args))
+    rdd_thread = threading.Thread(target=wait_on_executors, args=(nodeRDD, notebook, server_addr,))
+    rdd_thread.start()
 
+    clusterspec = server.await_reservations()
+
+    hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, None, 'horovod')
+    tb_hdfs_path, _, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
+
+    program = os.environ['PYSPARK_PYTHON']
+    envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
+            "TENSORBOARD_LOGDIR": tensorboard.logdir(),
+            "HADOOP_VERSION": os.environ['HADOOP_VERSION'],
+            "HADOOP_HOME": os.environ['HADOOP_HOME'],
+            "CLASSPATH": '$(${HADOOP_HOME}/bin/hadoop classpath --glob):${HADOOP_HOME}/share/hadoop/hdfs/hadoop'
+                         '-hdfs-${HADOOP_VERSION}.jar'}
+    nodes = get_nodes(clusterspec, program=program, args=args)
+    mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
+                                    envs=envs, nodes=nodes)
+    mpi = mpi_service.MPIService()
+    mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
+
+    exit_code = mpi.get_exit_code()
+
+    server.reservations.set_finished()
+
+    cleanup(tb_hdfs_path)
+    try:
+        exit_code = int(exit_code)
+        if exit_code < 0:
+            print("Failed to get exit code.")
+        elif exit_code > 0:
+            raise Exception("mpirun FAILED, look in the logs for the full error \n")
+    except ValueError:
+        print(exit_code)
+
+    rdd_thread.do_run = False
+    rdd_thread.join()
     print('Finished TensorFlow job \n')
-    print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
+    print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for full log and TensorBoard '
+                                                                                      'log dir')
 
 
 def get_logdir(app_id):
@@ -55,7 +92,11 @@ def get_logdir(app_id):
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/horovod/run.' + str(run_id)
 
 
-def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
+def wait_on_executors(node_rdd, notebook, server_addr):
+    node_rdd.foreachPartition(prepare_func(notebook, server_addr))
+
+
+def prepare_func(nb_path, server_addr):
 
     def _wrapper_fun(iter):
 
@@ -81,52 +122,16 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
         # Other executors simply block until index 0 reports mpirun is finished
 
         clusterspec = client.await_reservations()
+        print(executor_num, clusterspec)
 
         gpu_str = '\n\nChecking for GPUs in the environment\n' + devices.get_gpu_info()
         print(gpu_str)
 
-        # non-chief executor should not do mpirun
-        if not executor_num == 0:
-            client.await_mpirun_finished()
-        else:
-            hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, None, 'horovod')
-            tb_hdfs_path, _, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
+        client.await_mpirun_finished()
 
-            program = os.environ['PYSPARK_PYTHON']
-            envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
-                    "TENSORBOARD_LOGDIR": tensorboard.logdir(),
-                    "HADOOP_VERSION": os.environ['HADOOP_VERSION'],
-                    "HADOOP_HOME": os.environ['HADOOP_HOME'],
-                    "CLASSPATH": '$(${HADOOP_HOME}/bin/hadoop classpath --glob):${HADOOP_HOME}/share/hadoop/hdfs/hadoop'
-                                 '-hdfs-${HADOOP_VERSION}.jar'}
-            nodes = get_nodes(clusterspec, program=program, args=args)
-            mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
-                                            envs=envs, nodes=nodes)
-            mpi = mpi_service.MPIService()
-            try:
-                mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
-            except:
-                print("mpirun interrupted.")
-                status = mpi.stop_mpi_job()
-                print("kill mpirun process received: ", status)
-            exit_code = mpi.get_exit_code()
-
-            client.register_mpirun_finished()
-
-            if devices.get_num_gpus() > 0:
-                t_gpus.do_run = False
-                t_gpus.join()
-
-            cleanup(tb_hdfs_path)
-            try:
-                exit_code = int(exit_code)
-                if exit_code < 0:
-                    print("Failed to get exit code.")
-                elif exit_code > 0:
-                    log = mpi.get_saved_log()
-                    raise Exception("mpirun FAILED, look in the logs for the full error \n", log)
-            except ValueError:
-                print(exit_code)
+        if devices.get_num_gpus() > 0:
+            t_gpus.do_run = False
+            t_gpus.join()
 
     return _wrapper_fun
 

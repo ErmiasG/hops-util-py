@@ -38,13 +38,12 @@ class Reservations:
     def add(self, meta):
         """Add a reservation.
         Args:
-          :meta: a dictonary of metadata about a node
+          :meta: a dictionary of metadata about a node
         """
         with self.lock:
             self.reservations.append(meta)
             if self.remaining() == 0:
-                #self.merge()
-                self.check_executor_per_host()
+                self.merge()
                 self.check_done = True
 
     def merge(self):
@@ -62,14 +61,6 @@ class Reservations:
             if not found:
                 clusterspecs.append(executor)
         self.reservations = clusterspecs
-
-    def check_executor_per_host(self):
-        seen = []
-        for outerIndex, executor in enumerate(self.reservations):
-            for innerIndex, clusterspec in enumerate(seen):
-                if executor['host'] == clusterspec['host']:
-                    raise Exception('More than one executor detected in host: ' + clusterspec['host'])
-            seen.append(executor)
 
     def done(self):
         """Returns True if the ``required`` number of reservations have been fulfilled."""
@@ -183,7 +174,7 @@ class Server(MessageSocket):
         # hostname may not be resolvable but IP address probably will be
         host = util.get_ip_address()
         port = server_sock.getsockname()[1]
-        addr = (host,port)
+        addr = (host, port)
         logging.info("listening for reservations and gpu presence check at {0}".format(addr))
 
         def _listen(self, sock):
@@ -217,6 +208,7 @@ class Server(MessageSocket):
     def stop(self):
         """Stop the Server's socket listener."""
         self.done = True
+
 
 class Client(MessageSocket):
     """Client to register and await node reservations.
