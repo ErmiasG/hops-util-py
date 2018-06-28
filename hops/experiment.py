@@ -78,6 +78,7 @@ def evolutionary_search(spark, objective_function, search_dict, direction = 'max
         running = True
 
         app_id = str(sc.applicationId)
+        sc = spark.sparkContext
 
         diff_evo.run_id = diff_evo.run_id + 1
 
