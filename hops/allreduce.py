@@ -43,6 +43,7 @@ def launch(spark_session, notebook):
     print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
 
 def get_logdir(app_id):
+    global run_id
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/horovod/run.' + str(run_id)
 
 def prepare_func(app_id, run_id, nb_path):

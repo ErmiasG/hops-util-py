@@ -86,6 +86,7 @@ def _grid_launch(sc, map_fun, args_dict, direction='max'):
     return hdfs_runid_dir, param_combination, best_val
 
 def get_logdir(app_id):
+    global run_id
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id+ '/grid_search/run.' + str(run_id)
 
 

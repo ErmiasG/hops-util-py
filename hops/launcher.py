@@ -41,6 +41,7 @@ def launch(sc, map_fun, args_dict=None, name='no-name'):
     return 'hdfs:///Projects/' + hopshdfs.project_name() + '/Logs/TensorFlow/' + app_id + '/launcher/run.' +  str(run_id)
 
 def get_logdir(app_id):
+    global run_id
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/launcher/run.' +  str(run_id)
 
 

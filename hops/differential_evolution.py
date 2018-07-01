@@ -465,6 +465,7 @@ def _search(spark, function, search_dict, direction = 'max', generations=10, pop
     return str(root_dir), best_param, best_metric
 
 def get_logdir(app_id):
+    global run_id
     return hopshdfs.project_path() + "/Logs/TensorFlow/" + app_id + "/differential_evolution/run." + str(run_id)
 
 
