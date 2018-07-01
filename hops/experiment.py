@@ -9,6 +9,7 @@ from hops import hdfs as hopshdfs
 from hops import differential_evolution as diff_evo
 from hops import grid_search as gs
 from hops import launcher as launcher
+from hops import allreduce as allreduce
 
 from hops import util
 
@@ -133,6 +134,46 @@ def grid_search(spark, map_fun, args_dict, direction='max', name='no-name'):
         experiment_json = util.finalize_experiment(experiment_json, param, metric)
 
         util.put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+    except:
+        exception_handler()
+        raise
+    finally:
+        elastic_id +=1
+        running = False
+
+    return tensorboard_logdir
+
+def horovod(spark, notebook, name='no-name'):
+    """ Run the wrapper function with each hyperparameter combination as specified by the dictionary
+
+    Args:
+      :spark_session: SparkSession object
+      :map_fun: The TensorFlow function to run
+      :args_dict: (optional) A dictionary containing hyperparameter values to insert as arguments for each TensorFlow job
+    """
+    try:
+        global app_id
+        global experiment_json
+        global elastic_id
+        global running
+        running = True
+
+        sc = spark.sparkContext
+        app_id = str(sc.applicationId)
+
+        allreduce.run_id = allreduce.run_id + 1
+
+        experiment_json = None
+        experiment_json = util.populate_experiment(sc, name, 'experiment', 'horovod', allreduce.get_logdir(app_id))
+
+        util.put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+
+        tensorboard_logdir = allreduce.launch(sc, notebook)
+
+        experiment_json = util.finalize_experiment(experiment_json, '', '')
+
+        util.put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+
     except:
         exception_handler()
         raise
