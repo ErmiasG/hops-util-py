@@ -323,7 +323,7 @@ def run(sc, map_fun, tf_args, num_executors, num_ps, tensorboard=False, input_mo
                                              tb,
                                              None,
                                              app_id,
-                                             0,
+                                             run_id,
                                              queues,
                                              background=(input_mode == InputMode.SPARK)))
     except Exception as e:
