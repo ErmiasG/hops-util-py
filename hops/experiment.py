@@ -29,6 +29,7 @@ def launch(spark, map_fun, args_dict=None, name='no-name'):
       :spark_session: SparkSession object
       :map_fun: The TensorFlow function to run
       :args_dict: (optional) A dictionary containing hyperparameter values to insert as arguments for each TensorFlow job
+      :name: (optional) name of the job
     """
     try:
         global app_id
@@ -109,7 +110,9 @@ def grid_search(spark, map_fun, args_dict, direction='max', name='no-name'):
     Args:
       :spark_session: SparkSession object
       :map_fun: The TensorFlow function to run
-      :args_dict: (optional) A dictionary containing hyperparameter values to insert as arguments for each TensorFlow job
+      :args_dict: A dictionary containing hyperparameter values to insert as arguments for each TensorFlow job
+      :direction: 'max' to maximize, 'min' to minimize
+      :name: (optional) name of the job
     """
     try:
         global app_id
@@ -144,12 +147,12 @@ def grid_search(spark, map_fun, args_dict, direction='max', name='no-name'):
     return tensorboard_logdir
 
 def horovod(spark, notebook, name='no-name'):
-    """ Run the wrapper function with each hyperparameter combination as specified by the dictionary
+    """ Run the notebooks specified in the path as input to horovod
 
     Args:
       :spark_session: SparkSession object
-      :map_fun: The TensorFlow function to run
-      :args_dict: (optional) A dictionary containing hyperparameter values to insert as arguments for each TensorFlow job
+      :notebook: Notebook path
+      :name: (optional) name of the job
     """
     try:
         global app_id
