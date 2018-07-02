@@ -103,6 +103,8 @@ def create_directories(app_id, run_id, param_string, type, sub_type=None):
 
     if sub_type:
         hdfs_exec_logdir = hdfs_run_id_logdir + "/" + str(sub_type) + '/' + str(param_string)
+    elif not param_string and not sub_type:
+        hdfs_exec_logdir = hdfs_run_id_logdir + '/'
     else:
         hdfs_exec_logdir = hdfs_run_id_logdir + '/' + str(param_string)
 
