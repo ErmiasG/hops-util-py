@@ -18,7 +18,7 @@ from hops import util
 
 run_id = 0
 
-def launch(spark_session, notebook):
+def launch(sc, notebook):
     """ Run notebook pointed to in HopsFS as a python file in mpirun
     Args:
       :spark_session: SparkSession object
