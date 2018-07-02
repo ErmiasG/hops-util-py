@@ -10,6 +10,7 @@ from hops import differential_evolution as diff_evo
 from hops import grid_search as gs
 from hops import launcher as launcher
 from hops import allreduce as allreduce
+from hops.tensorflowonspark import TFCluster
 
 from hops import util
 

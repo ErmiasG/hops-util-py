@@ -46,6 +46,7 @@ elastic_id = 0
 experiment_json = None
 running = False
 app_id = None
+run_id = 0
 
 class InputMode(object):
   """Enum for the input modes of data feeding."""
@@ -100,6 +101,9 @@ class TFCluster(object):
         rdds.append(dataRDD)
       unionRDD = self.sc.union(rdds)
       unionRDD.foreachPartition(TFSparkNode.train(self.cluster_info, self.cluster_meta, qname))
+
+  def get_logdir(app_id, run_id):
+    return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/tensorflowonspark/run.' + str(run_id)
 
   def inference(self, dataRDD, qname='input'):
     """*For InputMode.SPARK only*: Feeds Spark RDD partitions into the TensorFlow worker nodes and returns an RDD of results
@@ -220,6 +224,10 @@ class TFCluster(object):
           tb_url = "http://{0}:{1}".format(node['host'], node['tb_port'])
       return tb_url
 
+def get_logdir(app_id):
+  global run_id
+  return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/tensorflowonspark/run.' + str(run_id)
+
 def run(sc, map_fun, tf_args, num_executors, num_ps, tensorboard=False, input_mode=InputMode.TENSORFLOW,
         log_dir=None, driver_ps_nodes=False, master_node=None, reservation_timeout=600, name='no-name', queues=['input', 'output', 'error']):
   """Starts the TensorFlowOnSpark cluster and Runs the TensorFlow "main" function on the Spark executors
@@ -245,8 +253,10 @@ def run(sc, map_fun, tf_args, num_executors, num_ps, tensorboard=False, input_mo
   #in hopsworks we want the tensorboard to always be true:
   global elastic_id
   global running
+  global run_id
   tb=True
   elastic_id = elastic_id + 1
+  run_id = run_id + 1
   running = True
 
   logging.info("Reserving TFSparkNodes {0}".format("w/ TensorBoard" if tb else ""))
@@ -299,7 +309,7 @@ def run(sc, map_fun, tf_args, num_executors, num_ps, tensorboard=False, input_mo
   app_id = sc.applicationId
   global experiment_json
   experiment_json = None
-  experiment_json = util.populate_experiment(sc, name, 'TFCluster', 'run', TFSparkNode.get_logdir(app_id))
+  experiment_json = util.populate_experiment(sc, name, 'TFCluster', 'run', get_logdir(app_id))
 
   util.put_elastic(hopshdfs.project_name(), app_id, str('dist' + str(elastic_id)), experiment_json)
 
