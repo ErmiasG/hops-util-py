@@ -28,7 +28,6 @@ def launch(spark_session, notebook):
     print('\nStarting TensorFlow job, follow your progress on TensorBoard in Jupyter UI! \n')
     sys.stdout.flush()
 
-    sc = spark_session.sparkContext
     app_id = str(sc.applicationId)
 
     conf_num = int(sc._conf.get("spark.executor.instances"))
