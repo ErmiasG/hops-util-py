@@ -27,6 +27,7 @@ def launch(spark_session, notebook):
       :spark_session: SparkSession object
       :notebook: The path in HopsFS to the notebook
     """
+    global run_id
 
     print('\nStarting TensorFlow job, follow your progress on TensorBoard in Jupyter UI! \n')
     sys.stdout.flush()
@@ -48,8 +49,9 @@ def launch(spark_session, notebook):
     print('Finished TensorFlow job \n')
     print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
 
+def get_logdir(app_id):
     global run_id
-    run_id += 1
+    return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/horovod/run.' + str(run_id)
 
 def prepare_func(app_id, run_id, nb_path, server_addr):
 
@@ -266,4 +268,4 @@ def localize_scripts(nb_path, clusterspec):
     st = os.stat(generate_env_path)
     os.chmod(py_runnable, st.st_mode | stat.S_IEXEC)
 
-return py_runnable
+    return py_runnable
