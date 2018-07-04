@@ -94,5 +94,5 @@ def get_gpu_uuid():
             ["nvidia-smi", "--format=csv,noheader,nounits", "--query-gpu=uuid"]).decode()
     except:
         print('Failed to get gpu uuid.')
-
+    gpu_uuid = [str(x) for x in gpu_uuid if x]
     return gpu_uuid.split('\n')

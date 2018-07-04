@@ -119,8 +119,8 @@ def get_nodes(clusterspec):
     nodes = []
     envs = ['HOROVOD_TIMELINE', 'TENSORBOARD_LOGDIR']
     for node in clusterspec:
-        n = mpi_service.Node(node['host'], len(node['cuda_visible_devices_ordinals'], node['executor_cwd'], envs=envs,
-                             gpus=node['cuda_visible_devices_ordinals']))
+        n = mpi_service.Node(node['host'], len(node['cuda_visible_devices_ordinals']), node['executor_cwd'], envs=envs,
+                             gpus=node['cuda_visible_devices_ordinals'])
         nodes.append(n)
     return nodes
 
