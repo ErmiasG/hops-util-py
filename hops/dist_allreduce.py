@@ -28,6 +28,7 @@ def launch(spark_session, notebook, args):
     Args:
       :spark_session: SparkSession object
       :notebook: The path in HopsFS to the notebook
+      :args: Program arguments given as list
     """
     global run_id
 

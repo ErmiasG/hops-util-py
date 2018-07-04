@@ -7,6 +7,7 @@ import subprocess
 import time
 import threading
 
+
 def get_gpu_info():
     # Get the gpu information
     gpu_str = ''
@@ -30,6 +31,7 @@ def get_gpu_info():
 
     return gpu_str
 
+
 def get_gpu_util():
     gpu_str = ''
     try:
@@ -46,11 +48,13 @@ def get_gpu_util():
     gpu_str += '-----------------------------------------------------------------------------------\n'
     return gpu_str
 
+
 def print_periodic_gpu_utilization():
     t = threading.currentThread()
     while getattr(t, "do_run", True):
         print(get_gpu_util())
         time.sleep(10)
+
 
 def get_num_gpus():
     """ Get the number of GPUs available in the environment
@@ -91,7 +95,7 @@ def get_gpu_uuid():
     gpu_uuid = []
     try:
         gpu_uuid = subprocess.check_output(
-            ["nvidia-smi", "--format=csv,noheader,nounits", "--query-gpu=uuid"]).decode()
+            ["nvidia-smi", "--format=csv,noheader", "--query-gpu=uuid"]).decode()
     except:
         print('Failed to get gpu uuid.')
     gpu_uuid = [str(x) for x in gpu_uuid if x]
