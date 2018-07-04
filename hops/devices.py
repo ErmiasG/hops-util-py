@@ -70,6 +70,7 @@ def get_num_gpus():
             count += 1
     return count
 
+
 def get_minor_gpu_device_numbers():
 
     gpu_info = []
@@ -86,6 +87,12 @@ def get_minor_gpu_device_numbers():
             device_id_list.append(pci_bus_id)
 
 
+def get_gpu_uuid():
+    gpu_uuid = []
+    try:
+        gpu_uuid = subprocess.check_output(
+            ["nvidia-smi", "--format=csv,noheader,nounits", "--query-gpu=uuid"]).decode()
+    except:
+        print('Failed to get gpu uuid.')
 
-
-
+    return gpu_uuid.split('\n')

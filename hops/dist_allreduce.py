@@ -18,10 +18,12 @@ from hops import tensorboard
 from hops import devices
 from hops import util
 import coordination_server
+import mpi_service
 
 run_id = 0
 
-def launch(spark_session, notebook):
+
+def launch(spark_session, notebook, args):
     """ Run notebook pointed to in HopsFS as a python file in mpirun
     Args:
       :spark_session: SparkSession object
@@ -36,24 +38,27 @@ def launch(spark_session, notebook):
     app_id = str(sc.applicationId)
 
     conf_num = int(sc._conf.get("spark.executor.instances"))
+    exec_mem = sc._conf.get("spark.executor.memory")
 
-    #Each TF task should be run on 1 executor
+    # Each TF task should be run on 1 executor
     nodeRDD = sc.parallelize(range(conf_num), conf_num)
 
     server = coordination_server.Server(conf_num)
     server_addr = server.start()
 
-    #Force execution on executor, since GPU is located on executor
-    nodeRDD.foreachPartition(prepare_func(app_id, run_id, notebook, server_addr))
+    # Force execution on executor, since GPU is located on executor
+    nodeRDD.foreachPartition(prepare_func(app_id, exec_mem, run_id, notebook, server_addr, args))
 
     print('Finished TensorFlow job \n')
     print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
+
 
 def get_logdir(app_id):
     global run_id
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/horovod/run.' + str(run_id)
 
-def prepare_func(app_id, run_id, nb_path, server_addr):
+
+def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
     def _wrapper_fun(iter):
 
@@ -64,7 +69,8 @@ def prepare_func(app_id, run_id, nb_path, server_addr):
 
         node_meta = {'host': get_ip_address(),
                      'executor_cwd': os.getcwd(),
-                     'cuda_visible_devices_ordinals': devices.get_minor_gpu_device_numbers()}
+                     'cuda_visible_devices_ordinals': devices.get_gpu_uuid(),
+                     'envs': os.environ}
 
         client.register(node_meta)
 
@@ -77,21 +83,10 @@ def prepare_func(app_id, run_id, nb_path, server_addr):
 
         clusterspec = client.await_reservations()
 
-        #pydoop.hdfs.dump('', os.environ['EXEC_LOGFILE'], user=hopshdfs.project_user())
-        #hopshdfs.init_logger()
-        #hopshdfs.log('Starting Spark executor with arguments')
-
         gpu_str = '\n\nChecking for GPUs in the environment\n' + devices.get_gpu_info()
-        #hopshdfs.log(gpu_str)
         print(gpu_str)
 
-        mpi_logfile_path = os.getcwd() + '/mpirun.log'
-        if os.path.exists(mpi_logfile_path):
-            os.remove(mpi_logfile_path)
-
-        mpi_logfile = open(mpi_logfile_path, 'w')
-
-        py_runnable = localize_scripts(nb_path, clusterspec)
+        py_runnable = localize_scripts(nb_path)
 
         # non-chief executor should not do mpirun
         if not executor_num == 0:
@@ -100,27 +95,14 @@ def prepare_func(app_id, run_id, nb_path, server_addr):
             hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, param_string='Horovod')
             tb_hdfs_path, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
 
-            mpi_cmd = 'HOROVOD_TIMELINE=' + tensorboard.logdir() + '/timeline.json' + \
-                      ' TENSORBOARD_LOGDIR=' + tensorboard.logdir() + \
-                      ' mpirun -np ' + str(get_num_ps(clusterspec)) + ' --hostfile ' + get_hosts_file(clusterspec) + \
-                      ' -bind-to none -map-by slot ' + \
-                      ' -x LD_LIBRARY_PATH ' + \
-                      ' -x HOROVOD_TIMELINE ' + \
-                      ' -x TENSORBOARD_LOGDIR ' + \
-                      ' -x NCCL_DEBUG=INFO ' + \
-                      ' -mca pml ob1 -mca btl ^openib ' + \
-                      os.environ['PYSPARK_PYTHON'] + ' ' + py_runnable
-
-            mpi = subprocess.Popen(mpi_cmd,
-                                   shell=True,
-                                   stdout=mpi_logfile,
-                                   stderr=mpi_logfile,
-                                   preexec_fn=util.on_executor_exit('SIGTERM'))
-
-            t_log = threading.Thread(target=print_log)
-            t_log.start()
-
-            mpi.wait()
+            program = os.environ['PYSPARK_PYTHON'] + ' ' + py_runnable
+            envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
+                    "TENSORBOARD_LOGDIR": tensorboard.logdir()}
+            nodes = get_nodes(clusterspec)
+            mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
+                                            program=program, args=args, envs=envs, nodes=nodes)
+            mpi = mpi_service.MPIService()
+            mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
 
             client.register_mpirun_finished()
 
@@ -128,48 +110,28 @@ def prepare_func(app_id, run_id, nb_path, server_addr):
                 t_gpus.do_run = False
                 t_gpus.join()
 
-            return_code = mpi.returncode
-
-            if return_code != 0:
-                cleanup(tb_hdfs_path)
-                t_log.do_run = False
-                t_log.join()
-                raise Exception('mpirun FAILED, look in the logs for the error')
-
             cleanup(tb_hdfs_path)
-            t_log.do_run = False
-            t_log.join()
 
     return _wrapper_fun
 
-def print_log():
-    mpi_logfile_path = os.getcwd() + '/mpirun.log'
-    mpi_logfile = open(mpi_logfile_path, 'r')
-    t = threading.currentThread()
-    while getattr(t, "do_run", True):
-        where = mpi_logfile.tell()
-        line = mpi_logfile.readline()
-        if not line:
-            time.sleep(1)
-            mpi_logfile.seek(where)
-        else:
-            print line
 
-    # Get the last outputs
-    line = mpi_logfile.readline()
-    while line:
-        where = mpi_logfile.tell()
-        print line
-        line = mpi_logfile.readline()
-        mpi_logfile.seek(where)
+def get_nodes(clusterspec):
+    nodes = []
+    envs = ['HOROVOD_TIMELINE', 'TENSORBOARD_LOGDIR']
+    for node in clusterspec:
+        n = mpi_service.Node(node['host'], len(node['cuda_visible_devices_ordinals'], node['executor_cwd'], envs=envs,
+                             gpus=node['cuda_visible_devices_ordinals']))
+        nodes.append(n)
+    return nodes
 
 
 def cleanup(tb_hdfs_path):
     hopshdfs.log('Performing cleanup')
     handle = hopshdfs.get()
-    if not tb_hdfs_path == None and not tb_hdfs_path == '' and handle.exists(tb_hdfs_path):
+    if tb_hdfs_path is not None and not tb_hdfs_path == '' and handle.exists(tb_hdfs_path):
         handle.delete(tb_hdfs_path)
     hopshdfs.kill_logger()
+
 
 def get_ip_address():
     """Simple utility to get host IP address"""
@@ -177,16 +139,19 @@ def get_ip_address():
     s.connect(("8.8.8.8", 80))
     return s.getsockname()[0]
 
+
 def get_hosts_string(clusterspec):
     hosts_string = ''
     for host in clusterspec:
         hosts_string = hosts_string + ' ' + host['host'] + ':' + str(len(host['cuda_visible_devices_ordinals']))
+
 
 def get_num_ps(clusterspec):
     num = 0
     for host in clusterspec:
         num += len(host['cuda_visible_devices_ordinals'])
     return num
+
 
 def get_hosts_file(clusterspec):
     hf = ''
@@ -196,29 +161,14 @@ def get_hosts_file(clusterspec):
     with open(host_file, 'w') as hostfile: hostfile.write(hf)
     return host_file
 
+
 def find_host_in_clusterspec(clusterspec, host):
     for h in clusterspec:
         if h['name'] == host:
             return h
 
-# The code generated by this function will be called in an eval, which changes the working_dir and cuda_visible_devices for process running mpirun
-def generate_environment_script(clusterspec):
 
-    import_script = 'import os \n' \
-                    'from hops import util'
-
-    export_script = ''
-
-    for host in clusterspec:
-        export_script += 'def export_workdir():\n' \
-                         '    if util.get_ip_address() == \"' + find_host_in_clusterspec(clusterspec, host['host'])['host'] + '\":\n' \
-                                                                                                                              '        os.chdir=\"' + host['executor_cwd'] + '\"\n' \
-                                                                                                                                                                             '        os.environ["CUDA_DEVICE_ORDER"]=\"PCI_BUS_ID\" \n' \
-                                                                                                                                                                             '        os.environ["CUDA_VISIBLE_DEVICES"]=\"' + ",".join(str(x) for x in host['cuda_visible_devices_ordinals']) + '\"\n'
-
-    return import_script + '\n' + export_script
-
-def localize_scripts(nb_path, clusterspec):
+def localize_scripts(nb_path):
 
     # 1. Download the notebook as a string
     fs_handle = hopshdfs.get_fs()
@@ -254,18 +204,6 @@ def localize_scripts(nb_path, clusterspec):
     with open(py_runnable, 'w') as modified: modified.write(notebook + data)
 
     st = os.stat(py_runnable)
-    os.chmod(py_runnable, st.st_mode | stat.S_IEXEC)
-
-    # 4. Localize generate_env.py script
-    environment_script = generate_environment_script(clusterspec)
-    generate_env_path = os.getcwd() + '/generate_env.py'
-    f_env = open(generate_env_path, "w+")
-    f_env.write(environment_script)
-    f_env.flush()
-    f_env.close()
-
-    # 5. Make generate_env.py runnable
-    st = os.stat(generate_env_path)
     os.chmod(py_runnable, st.st_mode | stat.S_IEXEC)
 
     return py_runnable
