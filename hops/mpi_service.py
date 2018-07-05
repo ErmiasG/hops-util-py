@@ -36,12 +36,14 @@ elif os.environ['SSL_ENABLED'] == 'false' and url_.scheme != 'http':
 
 class MPIService:
 
-    def __init__(self, session_id=None, token=None, appid=None, pid=None):
+    def __init__(self, session_id=None, token=None, appid=None, pid=None, num_stdout_lines_to_save=50):
         self._base_url = MPI_REST_ENDPOINT.strip('/')
         self.cookies = {}
         self.headers = {}
         self.appid = appid
         self.pid = pid
+        self._num_stdout_lines_to_save = num_stdout_lines_to_save
+        self._stdout = ''
         if session_id is not None:
             self.cookies = {'SESSIONID': session_id}
         elif token is not None:
@@ -94,6 +96,17 @@ class MPIService:
         response = session.get(url, headers=headers, cookies=cookies)
         return MPIService.handel_response(response)
 
+    def get_exit_code(self):
+        with requests.Session() as session:
+            status = self.get_exit_code_(self._base_url, session, self.appid, self.pid, headers=self.headers, cookies=self.cookies)
+        return status
+
+    @staticmethod
+    def get_exit_code_(base_url, session, appid, pid, headers={}, cookies={}):
+        url = base_url + '/jobs/' + appid + '/' + str(pid) + '/exit-code'
+        response = session.get(url, headers=headers, cookies=cookies)
+        return MPIService.handel_response(response)
+
     def mpi_top(self):
         with requests.Session() as session:
             top = self.mpi_top_(self._base_url, session, self.appid, self.pid, headers=self.headers,
@@ -129,6 +142,7 @@ class MPIService:
                 offset_ = offset_ + len(out_)
                 if len(out_) > 0:
                     stream.write(out_)
+                    self._get_log_tail(out_)
             time.sleep(POLLING_DELAY)
 
     def mpirun_and_wait(self, payload={}, stdout=None, stderr=None):
@@ -146,6 +160,15 @@ class MPIService:
     def handel_response(response):
         response.raise_for_status()
         return response.content
+
+    def _get_log_tail(self, lines):
+        lines = self._stdout + lines
+        lines = lines.split('\n')
+        lines = "\n".join(lines[-self._num_stdout_lines_to_save:])
+        self._stdout = lines
+
+    def get_saved_log(self):
+        return self._stdout
 
 
 class Node:

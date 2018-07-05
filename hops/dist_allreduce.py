@@ -103,7 +103,9 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
             mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
                                             program=program, args=args, envs=envs, nodes=nodes)
             mpi = mpi_service.MPIService()
+
             mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
+            exit_code = mpi.get_exit_code()
 
             client.register_mpirun_finished()
 
@@ -112,6 +114,15 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
                 t_gpus.join()
 
             cleanup(tb_hdfs_path)
+            try:
+                exit_code = int(exit_code)
+                if exit_code < 0:
+                    print("Failed to get exit code.")
+                elif exit_code > 0:
+                    log = mpi.get_saved_log()
+                    raise Exception("mpirun FAILED, look in the logs for the full error \n", log)
+            except ValueError:
+                print(exit_code)
 
     return _wrapper_fun
 
