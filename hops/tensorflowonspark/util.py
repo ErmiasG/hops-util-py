@@ -12,7 +12,9 @@ import socket
 
 def get_ip_address():
   """Simple utility to get host IP address."""
-  return socket.gethostbyname(socket.gethostname())
+  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  s.connect(("8.8.8.8", 80))
+  return s.getsockname()[0]
 
 
 def find_in_path(path, file):

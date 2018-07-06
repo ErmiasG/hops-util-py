@@ -127,9 +127,7 @@ def grid_params(dict):
 
 def get_ip_address():
     """Simple utility to get host IP address"""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    return s.getsockname()[0]
+    return socket.gethostbyname(socket.gethostname())
 
 def time_diff(task_start, task_end):
     time_diff = task_end - task_start
