@@ -6,6 +6,7 @@ import requests
 import json
 import time
 import os
+import sys
 from threading import Thread
 try:
     from urlparse import urlparse
@@ -131,9 +132,10 @@ class MPIService:
             done = self.is_done()
             time.sleep(POLLING_DELAY)
 
-    def redirect_log(self, log_type, stream):
-        if stream is None or not hasattr(stream, 'write'):
-            raise ValueError('Stream needs to be writable.')
+    def write_log(self, log_type):
+        stream = sys.stdout
+        if log_type == 'stderr':
+            stream = sys.stderr
         if not log_type:
             log_type = 'stdout'
         done = self.is_done()
@@ -148,14 +150,13 @@ class MPIService:
                     stream.flush()
                     self._get_log_tail(out_)
             time.sleep(POLLING_DELAY)
+        #stream.close()
 
-    def mpirun_and_wait(self, payload={}, stdout=None, stderr=None):
+    def mpirun_and_wait(self, payload={}):
         self.mpirun(payload=payload)
         try:
-            if stdout is not None and hasattr(stdout, 'write'):
-                Thread(target=self.redirect_log, args=('stdout', stdout,))
-            if stderr is not None and hasattr(stdout, 'write'):
-                Thread(target=self.redirect_log, args=('stderr', stderr,))
+            Thread(target=self.write_log, args=('stdout',))
+            Thread(target=self.write_log, args=('stderr',))
         except:
             print("Error: unable to start thread")
         self.wait()

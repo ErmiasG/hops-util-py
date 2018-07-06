@@ -103,7 +103,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
                                             envs=envs, nodes=nodes)
             mpi = mpi_service.MPIService()
 
-            mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
+            mpi.mpirun_and_wait(payload=mpi_cmd)
             exit_code = mpi.get_exit_code()
 
             client.register_mpirun_finished()
