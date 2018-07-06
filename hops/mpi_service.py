@@ -6,10 +6,7 @@ import requests
 import json
 import time
 import os
-try:
-    import thread as thread
-except ModuleNotFoundError:
-    import threading as thread
+from threading import Thread
 try:
     from urlparse import urlparse
 except ModuleNotFoundError:
@@ -156,9 +153,9 @@ class MPIService:
         self.mpirun(payload=payload)
         try:
             if stdout is not None and hasattr(stdout, 'write'):
-                thread.start_new_thread(self.redirect_log, ('stdout', stdout,))
+                Thread.start_new_thread(self.redirect_log, ('stdout', stdout,))
             if stderr is not None and hasattr(stdout, 'write'):
-                thread.start_new_thread(self.redirect_log, ('stderr', stderr,))
+                Thread.start_new_thread(self.redirect_log, ('stderr', stderr,))
         except:
             print("Error: unable to start thread")
         self.wait()
