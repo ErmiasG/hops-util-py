@@ -12,7 +12,7 @@ from urlparse import urlparse
 STOP_STATES = ['Stopped', 'Unknown']
 POLLING_DELAY = 2
 NO_LOG = 'No log found for appid.'
-
+os.environ['MPI_REST_ENDPOINT'] = 'http://bbc4.sics.se:62668/mpi-service'
 if 'MPI_REST_ENDPOINT' not in os.environ:
     raise EnvironmentError('Environment variable MPI_REST_ENDPOINT not set.')
 MPI_REST_ENDPOINT = os.environ['MPI_REST_ENDPOINT']
