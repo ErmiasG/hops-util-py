@@ -91,7 +91,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
         else:
             hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, param_string='Horovod',
                                                                               type='dist')
-            tb_hdfs_path, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
+            tb_hdfs_path, _, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
 
             program = os.environ['PYSPARK_PYTHON'] + ' ' + py_runnable
             envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
