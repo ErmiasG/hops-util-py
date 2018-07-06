@@ -72,6 +72,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
                      'executor_cwd': os.getcwd(),
                      'cuda_visible_devices_ordinals': devices.get_gpu_uuid(),
                      'envs': os.environ}
+        print(node_meta)
 
         client.register(node_meta)
 
