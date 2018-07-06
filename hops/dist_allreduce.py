@@ -3,20 +3,17 @@ Utility functions to retrieve information about available services and setting u
 These utils facilitates development by hiding complexity for programs interacting with Hops services.
 """
 
-import pydoop.hdfs
 import subprocess
 import os
 import stat
 import sys
 import threading
-import time
 import socket
 
 
 from hops import hdfs as hopshdfs
 from hops import tensorboard
 from hops import devices
-from hops import util
 import coordination_server
 import mpi_service
 
