@@ -64,9 +64,11 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
         client = coordination_server.Client(server_addr)
 
+        py_runnable = localize_scripts(nb_path)
         node_meta = {'host': get_ip_address(),
                      'executor_cwd': os.getcwd(),
-                     'cuda_visible_devices_ordinals': devices.get_gpu_uuid()}
+                     'cuda_visible_devices_ordinals': devices.get_gpu_uuid(),
+                     'py_runnable': py_runnable}
         print(node_meta)
 
         client.register(node_meta)
@@ -83,8 +85,6 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
         gpu_str = '\n\nChecking for GPUs in the environment\n' + devices.get_gpu_info()
         print(gpu_str)
 
-        py_runnable = localize_scripts(nb_path)
-
         # non-chief executor should not do mpirun
         if not executor_num == 0:
             client.await_mpirun_finished()
@@ -93,14 +93,14 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
                                                                               type='dist')
             tb_hdfs_path, _, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
 
-            program = os.environ['PYSPARK_PYTHON'] + ' ' + py_runnable
+            program = os.environ['PYSPARK_PYTHON']
             envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
                     "TENSORBOARD_LOGDIR": tensorboard.logdir(),
                     "CLASSPATH": '$(${HADOOP_HOME}/bin/hadoop classpath --glob):${HADOOP_HOME}/share/hadoop/hdfs/hadoop'
                                  '-hdfs-${HADOOP_VERSION}.jar'}
-            nodes = get_nodes(clusterspec)
+            nodes = get_nodes(clusterspec, program=program, args=args)
             mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
-                                            program=program, args=args, envs=envs, nodes=nodes)
+                                            envs=envs, nodes=nodes)
             mpi = mpi_service.MPIService()
 
             mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
@@ -126,12 +126,14 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
     return _wrapper_fun
 
 
-def get_nodes(clusterspec):
+def get_nodes(clusterspec, program=None, args=None):
     nodes = []
     envs = ['HOROVOD_TIMELINE', 'TENSORBOARD_LOGDIR', 'CLASSPATH']
+
     for node in clusterspec:
-        n = mpi_service.Node(node['host'], len(node['cuda_visible_devices_ordinals']), node['executor_cwd'], envs=envs,
-                             gpus=node['cuda_visible_devices_ordinals'])
+        runnable = program + ' ' + node['py_runnable']
+        n = mpi_service.Node(node['host'], len(node['cuda_visible_devices_ordinals']), node['executor_cwd'],
+                             program=runnable, args=args, envs=envs, gpus=node['cuda_visible_devices_ordinals'])
         nodes.append(n)
     return nodes
 
