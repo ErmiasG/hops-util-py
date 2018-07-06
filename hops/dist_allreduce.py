@@ -122,6 +122,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
                     raise Exception("mpirun FAILED, look in the logs for the full error \n", log)
             except ValueError:
                 print(exit_code)
+            print(mpi.get_saved_log())
 
     return _wrapper_fun
 

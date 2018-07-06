@@ -148,6 +148,7 @@ class MPIService:
                 offset_ = offset_ + len(out_)
                 if len(out_) > 0:
                     stream.write(out_)
+                    stream.flush()
                     self._get_log_tail(out_)
             time.sleep(POLLING_DELAY)
 
