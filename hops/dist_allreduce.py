@@ -10,7 +10,6 @@ import sys
 import threading
 import socket
 
-
 from hops import hdfs as hopshdfs
 from hops import tensorboard
 from hops import devices
