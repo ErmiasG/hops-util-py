@@ -66,8 +66,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
         node_meta = {'host': get_ip_address(),
                      'executor_cwd': os.getcwd(),
-                     'cuda_visible_devices_ordinals': devices.get_gpu_uuid(),
-                     'envs': os.environ}
+                     'cuda_visible_devices_ordinals': devices.get_gpu_uuid()}
         print(node_meta)
 
         client.register(node_meta)
@@ -95,7 +94,9 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
             program = os.environ['PYSPARK_PYTHON'] + ' ' + py_runnable
             envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
-                    "TENSORBOARD_LOGDIR": tensorboard.logdir()}
+                    "TENSORBOARD_LOGDIR": tensorboard.logdir(),
+                    "CLASSPATH": '$(${HADOOP_HOME}/bin/hadoop classpath --glob):${HADOOP_HOME}/share/hadoop/hdfs/hadoop'
+                                 '-hdfs-${HADOOP_VERSION}.jar'}
             nodes = get_nodes(clusterspec)
             mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
                                             program=program, args=args, envs=envs, nodes=nodes)
@@ -126,7 +127,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
 def get_nodes(clusterspec):
     nodes = []
-    envs = ['HOROVOD_TIMELINE', 'TENSORBOARD_LOGDIR']
+    envs = ['HOROVOD_TIMELINE', 'TENSORBOARD_LOGDIR', 'CLASSPATH']
     for node in clusterspec:
         n = mpi_service.Node(node['host'], len(node['cuda_visible_devices_ordinals']), node['executor_cwd'], envs=envs,
                              gpus=node['cuda_visible_devices_ordinals'])
