@@ -4,10 +4,16 @@ MPI service helper classes that can be used to spawn mpi processes and retrieve 
 
 import requests
 import json
-import thread
 import time
 import os
-from urlparse import urlparse
+try:
+    import thread as thread
+except ModuleNotFoundError:
+    import threading as thread
+try:
+    from urlparse import urlparse
+except ModuleNotFoundError:
+    from urllib.parse import urlparse
 
 STOP_STATES = ['Stopped', 'Unknown']
 POLLING_DELAY = 2
