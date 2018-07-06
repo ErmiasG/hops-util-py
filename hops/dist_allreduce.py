@@ -185,8 +185,8 @@ def localize_scripts(nb_path):
     fd.close()
 
     path, filename = os.path.split(nb_path)
-    f_nb = open(filename, "w+")
-    f_nb.write(str(note))
+    f_nb = open(filename, 'wb')
+    f_nb.write(note)
     f_nb.flush()
     f_nb.close()
 
