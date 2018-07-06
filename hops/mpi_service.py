@@ -153,9 +153,9 @@ class MPIService:
         self.mpirun(payload=payload)
         try:
             if stdout is not None and hasattr(stdout, 'write'):
-                Thread.start_new_thread(self.redirect_log, ('stdout', stdout,))
+                Thread(target=self.redirect_log, args=('stdout', stdout,))
             if stderr is not None and hasattr(stdout, 'write'):
-                Thread.start_new_thread(self.redirect_log, ('stderr', stderr,))
+                Thread(target=self.redirect_log, args=('stderr', stderr,))
         except:
             print("Error: unable to start thread")
         self.wait()
