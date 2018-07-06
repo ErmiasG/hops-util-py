@@ -165,8 +165,8 @@ class MPIService:
     @staticmethod
     def handel_response(response):
         response.raise_for_status()
-        response.encoding = 'utf-8'
-        return response.content
+        content = response.content
+        return content.decode("utf-8")
 
     def _get_log_tail(self, lines):
         lines = self._stdout + lines
