@@ -145,9 +145,7 @@ def cleanup(tb_hdfs_path):
 
 def get_ip_address():
     """Simple utility to get host IP address"""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    return s.getsockname()[0]
+    return socket.gethostbyname(socket.gethostname())
 
 
 def get_hosts_string(clusterspec):
@@ -182,7 +180,7 @@ def localize_scripts(nb_path):
 
     # 1. Download the notebook as a string
     fs_handle = hopshdfs.get_fs()
-    fd = fs_handle.open_file(nb_path, flags='r')
+    fd = fs_handle.open_file(nb_path, mode='r')
     note = fd.read()
     fd.close()
 
