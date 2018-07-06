@@ -13,8 +13,8 @@ import socket
 from hops import hdfs as hopshdfs
 from hops import tensorboard
 from hops import devices
-import coordination_server
-import mpi_service
+from hops import coordination_server
+from hops import mpi_service
 
 run_id = 0
 
