@@ -185,8 +185,8 @@ def localize_scripts(nb_path):
     fd.close()
 
     path, filename = os.path.split(nb_path)
-    f_nb = open(filename,"w+")
-    f_nb.write(note)
+    f_nb = open(filename, "w+")
+    f_nb.write(str(note))
     f_nb.flush()
     f_nb.close()
 
@@ -202,14 +202,8 @@ def localize_scripts(nb_path):
     print(stdout)
     print(stderr)
 
-    # 3. Prepend script to export environment variables and Make py file runnable
     py_runnable = os.getcwd() + '/' + filename.split('.')[0] + '.py'
-
-    notebook = 'with open("generate_env.py", "r") as myfile:\n' \
-               '    data=myfile.read()\n' \
-               '    exec(data)\n'
-    with open(py_runnable, 'r') as original: data = original.read()
-    with open(py_runnable, 'w') as modified: modified.write(notebook + data)
+    assert os.path.isfile(py_runnable)
 
     st = os.stat(py_runnable)
     os.chmod(py_runnable, st.st_mode | stat.S_IEXEC)
