@@ -96,6 +96,8 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
             program = os.environ['PYSPARK_PYTHON']
             envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
                     "TENSORBOARD_LOGDIR": tensorboard.logdir(),
+                    "HADOOP_VERSION": os.environ['HADOOP_VERSION'],
+                    "HADOOP_HOME": os.environ['HADOOP_HOME'],
                     "CLASSPATH": '$(${HADOOP_HOME}/bin/hadoop classpath --glob):${HADOOP_HOME}/share/hadoop/hdfs/hadoop'
                                  '-hdfs-${HADOOP_VERSION}.jar'}
             nodes = get_nodes(clusterspec, program=program, args=args)
