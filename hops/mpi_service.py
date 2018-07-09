@@ -132,7 +132,7 @@ class MPIService:
             done = self.is_done()
             time.sleep(POLLING_DELAY)
 
-    def log_output(self, output=None, offset=0, stream=None):
+    def _log_output(self, output=None, offset=0, stream=None):
         if output is None:
             return offset
         if stream is None or not hasattr(stream, 'write'):
@@ -141,6 +141,7 @@ class MPIService:
             offset = offset + len(output)
             stream.write(output)
             stream.flush()
+            self._get_log_tail(output)
         return offset
 
     def write_log(self, stdout=None, stderr=None):
@@ -151,15 +152,13 @@ class MPIService:
             done = self.is_done()
             stdout_ = self.get_log(log_type='stdout', offset=out_offset_)
             stderr_ = self.get_log(log_type='stderr', offset=err_offset_)
-            out_offset_ = self.log_output(output=stdout_, offset=out_offset_, stream=stdout)
-            err_offset_ = self.log_output(output=stderr_, offset=err_offset_, stream=stderr)
-            self._get_log_tail(stdout_)
+            out_offset_ = self._log_output(output=stdout_, offset=out_offset_, stream=stdout)
+            err_offset_ = self._log_output(output=stderr_, offset=err_offset_, stream=stderr)
             time.sleep(POLLING_DELAY)
 
     def mpirun_and_wait(self, payload={}, stdout=None, stderr=None):
         self.mpirun(payload=payload)
         self.write_log(stdout=stdout, stderr=stderr)
-
 
     @staticmethod
     def handel_response(response):
