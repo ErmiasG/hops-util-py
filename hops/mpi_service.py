@@ -151,8 +151,8 @@ class MPIService:
             done = self.is_done()
             stdout_ = self.get_log(log_type='stdout', offset=out_offset_)
             stderr_ = self.get_log(log_type='stderr', offset=err_offset_)
-            out_offset_ = self.log_output(output=stdout_, offset=out_offset_, stdout=stdout)
-            err_offset_ = self.log_output(output=stderr_, offset=err_offset_, stderr=stderr)
+            out_offset_ = self.log_output(output=stdout_, offset=out_offset_, stream=stdout)
+            err_offset_ = self.log_output(output=stderr_, offset=err_offset_, stream=stderr)
             self._get_log_tail(stdout_)
             time.sleep(POLLING_DELAY)
 
