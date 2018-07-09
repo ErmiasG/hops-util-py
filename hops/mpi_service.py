@@ -75,6 +75,18 @@ class MPIService:
         response = session.post(url, headers=headers, cookies=cookies, data=payload)
         return MPIService.handel_response(response)
 
+    def stop_mpi_job(self):
+        with requests.Session() as session:
+            status = self.stop_mpi_job_(self._base_url, session, self.appid, self.pid, headers=self.headers,
+                                        cookies=self.cookies)
+        return status
+
+    @staticmethod
+    def stop_mpi_job_(base_url, session, appid, pid, headers={}, cookies={}):
+        url = base_url + '/jobs/' + appid + '/' + str(pid)
+        response = session.delete(url, headers=headers, cookies=cookies)
+        return MPIService.handel_response(response)
+
     def get_log(self, log_type='stdout', offset=0, length=-1):
         with requests.Session() as session:
             log = self.get_log_(self._base_url, session, self.appid, self.pid, log_type, offset, length,

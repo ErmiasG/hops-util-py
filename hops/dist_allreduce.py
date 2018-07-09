@@ -104,8 +104,12 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
             mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
                                             envs=envs, nodes=nodes)
             mpi = mpi_service.MPIService()
-
-            mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
+            try:
+                mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
+            except:
+                print("mpirun interrupted.")
+                status = mpi.stop_mpi_job()
+                print("kill mpirun process received: ", status)
             exit_code = mpi.get_exit_code()
 
             client.register_mpirun_finished()
