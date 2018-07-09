@@ -33,8 +33,6 @@ def launch(spark_session, notebook, args):
 
     sc = spark_session.sparkContext
     app_id = str(sc.applicationId)
-    log4jLogger = sc._jvm.org.apache.log4j
-    LOGGER = log4jLogger.LogManager.getLogger(__name__)
 
     conf_num = int(sc._conf.get("spark.executor.instances"))
     exec_mem = sc._conf.get("spark.executor.memory")
@@ -46,7 +44,7 @@ def launch(spark_session, notebook, args):
     server_addr = server.start()
 
     # Force execution on executor, since GPU is located on executor
-    nodeRDD.foreachPartition(prepare_func(app_id, exec_mem, run_id, notebook, server_addr, args, LOGGER))
+    nodeRDD.foreachPartition(prepare_func(app_id, exec_mem, run_id, notebook, server_addr, args))
 
     print('Finished TensorFlow job \n')
     print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
@@ -57,7 +55,7 @@ def get_logdir(app_id):
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/horovod/run.' + str(run_id)
 
 
-def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args, LOGGER):
+def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
     def _wrapper_fun(iter):
 
@@ -105,7 +103,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args, LOGGER):
                                             envs=envs, nodes=nodes)
             mpi = mpi_service.MPIService()
 
-            mpi.mpirun_and_wait(payload=mpi_cmd, logger=LOGGER)
+            mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
             exit_code = mpi.get_exit_code()
 
             client.register_mpirun_finished()
