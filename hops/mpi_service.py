@@ -132,10 +132,9 @@ class MPIService:
             done = self.is_done()
             time.sleep(POLLING_DELAY)
 
-    def write_log(self, log_type):
-        stream = sys.stdout
-        if log_type == 'stderr':
-            stream = sys.stderr
+    def write_log(self, log_type, stream):
+        if stream is None or not hasattr(stream, 'write'):
+            raise ValueError('Stream needs to be writable.')
         if not log_type:
             log_type = 'stdout'
         done = self.is_done()
@@ -150,16 +149,12 @@ class MPIService:
                     stream.flush()
                     self._get_log_tail(out_)
             time.sleep(POLLING_DELAY)
-        #stream.close()
 
-    def mpirun_and_wait(self, payload={}):
+    def mpirun_and_wait(self, payload={}, stdout=None, stderr=None):
         self.mpirun(payload=payload)
-        try:
-            Thread(target=self.write_log, args=('stdout',))
-            Thread(target=self.write_log, args=('stderr',))
-        except:
-            print("Error: unable to start thread")
-        self.wait()
+        self.write_log('stdout', stdout)
+        #self.write_log('stderr', stderr)
+        #self.wait()
 
     @staticmethod
     def handel_response(response):
