@@ -130,7 +130,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
 def get_nodes(clusterspec, program=None, args=None):
     nodes = []
-    envs = ['HOROVOD_TIMELINE', 'TENSORBOARD_LOGDIR', 'CLASSPATH']
+    envs = ['HOROVOD_TIMELINE', 'TENSORBOARD_LOGDIR']
 
     for node in clusterspec:
         runnable = program + ' ' + node['py_runnable']
