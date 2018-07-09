@@ -132,29 +132,37 @@ class MPIService:
             done = self.is_done()
             time.sleep(POLLING_DELAY)
 
-    def write_log(self, log_type, stream):
-        if stream is None or not hasattr(stream, 'write'):
-            raise ValueError('Stream needs to be writable.')
-        if not log_type:
-            log_type = 'stdout'
+    def log_output(self, log_type='stdout', output=None, offset=0, logger=None):
+        if output is None or logger is None:
+            return offset
+        if len(output) > 0 and output != NO_LOG:
+            offset = offset + len(output)
+            if log_type == 'stdout':
+                logger.info(output)
+            else:
+                logger.error(output)
+        return offset
+
+    def write_log(self, logger):
+        out_offset_ = 0
+        err_offset_ = 0
         done = self.is_done()
-        offset_ = 0
         while not done:
             done = self.is_done()
-            out_ = self.get_log(log_type=log_type, offset=offset_)
-            if out_ != NO_LOG:
-                offset_ = offset_ + len(out_)
-                if len(out_) > 0:
-                    stream.write(out_)
-                    stream.flush()
-                    self._get_log_tail(out_)
+            stdout_ = self.get_log(log_type='stdout', offset=out_offset_)
+            stderr_ = self.get_log(log_type='stderr', offset=err_offset_)
+            out_offset_ = self.log_output(log_type='stdout', output=stdout_, offset=out_offset_, logger=logger)
+            err_offset_ = self.log_output(log_type='stderr', output=stderr_, offset=err_offset_, logger=logger)
+            self._get_log_tail(stdout_)
             time.sleep(POLLING_DELAY)
 
-    def mpirun_and_wait(self, payload={}, stdout=None, stderr=None):
+    def mpirun_and_wait(self, payload={}, logger=None):
         self.mpirun(payload=payload)
-        self.write_log('stdout', stdout)
-        #self.write_log('stderr', stderr)
-        #self.wait()
+        if logger is not None:
+            self.write_log()
+        else:
+            self.wait()
+
 
     @staticmethod
     def handel_response(response):

@@ -27,12 +27,15 @@ def launch(spark_session, notebook, args):
       :args: Program arguments given as list
     """
     global run_id
+    global LOGGER
 
     print('\nStarting TensorFlow job, follow your progress on TensorBoard in Jupyter UI! \n')
     sys.stdout.flush()
 
     sc = spark_session.sparkContext
     app_id = str(sc.applicationId)
+    log4jLogger = sc._jvm.org.apache.log4j
+    LOGGER = log4jLogger.LogManager.getLogger(__name__)
 
     conf_num = int(sc._conf.get("spark.executor.instances"))
     exec_mem = sc._conf.get("spark.executor.memory")
@@ -122,7 +125,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
                     raise Exception("mpirun FAILED, look in the logs for the full error \n", log)
             except ValueError:
                 print(exit_code)
-            print(mpi.get_saved_log())
+            LOGGER.info(mpi.get_saved_log())
 
     return _wrapper_fun
 
