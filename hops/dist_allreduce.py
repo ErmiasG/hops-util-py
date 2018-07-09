@@ -27,7 +27,6 @@ def launch(spark_session, notebook, args):
       :args: Program arguments given as list
     """
     global run_id
-    global LOGGER
 
     print('\nStarting TensorFlow job, follow your progress on TensorBoard in Jupyter UI! \n')
     sys.stdout.flush()
@@ -47,7 +46,7 @@ def launch(spark_session, notebook, args):
     server_addr = server.start()
 
     # Force execution on executor, since GPU is located on executor
-    nodeRDD.foreachPartition(prepare_func(app_id, exec_mem, run_id, notebook, server_addr, args))
+    nodeRDD.foreachPartition(prepare_func(app_id, exec_mem, run_id, notebook, server_addr, args, LOGGER))
 
     print('Finished TensorFlow job \n')
     print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
@@ -58,7 +57,7 @@ def get_logdir(app_id):
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/horovod/run.' + str(run_id)
 
 
-def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
+def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args, LOGGER):
 
     def _wrapper_fun(iter):
 
