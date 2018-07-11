@@ -9,6 +9,7 @@ import stat
 import sys
 import threading
 import socket
+import time
 
 from hops import hdfs as hopshdfs
 from hops import tensorboard
@@ -42,11 +43,16 @@ def launch(spark_session, notebook, args):
 
     server = coordination_server.Server(conf_num)
     server_addr = server.start()
+    print("Server address: ", server_addr)
 
     # Force execution on executor, since GPU is located on executor
     nodeRDD.foreachPartition(prepare_func(notebook, server_addr))
 
-    clusterspec = server.await_reservations()
+    while not server.reservations.done():
+        print("Remaining reservations: ", server.reservations.remaining())
+        time.sleep(5)
+
+    clusterspec = server.reservations.get()  # server.await_reservations()
 
     hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, param_string='Horovod',
                                                                       type='dist')
@@ -85,6 +91,7 @@ def launch(spark_session, notebook, args):
         print(exit_code)
 
     print('Finished TensorFlow job \n')
+    print(mpi.get_saved_log())
     print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
 
 
