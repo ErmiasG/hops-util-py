@@ -6,8 +6,7 @@ import requests
 import json
 import time
 import os
-import sys
-from threading import Thread
+
 try:
     from urlparse import urlparse
 except ModuleNotFoundError:

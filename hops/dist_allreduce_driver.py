@@ -9,7 +9,7 @@ import stat
 import sys
 import threading
 import socket
-import time
+import signal
 
 from hops import hdfs as hopshdfs
 from hops import tensorboard
@@ -18,6 +18,17 @@ from hops import coordination_server
 from hops import mpi_service
 
 run_id = 0
+mpi = None
+
+
+def sigint_handler(sig, frame):
+    print('Interrupted', sig)
+    if mpi is not None and hasattr(mpi, 'stop_mpi_job'):
+        status = mpi.stop_mpi_job()
+        print("kill mpirun process received: ", status)
+
+
+signal.signal(signal.SIGINT, sigint_handler)
 
 
 def launch(spark_session, notebook, args):
@@ -28,6 +39,7 @@ def launch(spark_session, notebook, args):
       :args: Program arguments given as list
     """
     global run_id
+    global mpi
 
     print('\nStarting TensorFlow job, follow your progress on TensorBoard in Jupyter UI! \n')
     sys.stdout.flush()
@@ -46,13 +58,10 @@ def launch(spark_session, notebook, args):
     print("Server address: ", server_addr)
 
     # Force execution on executor, since GPU is located on executor
-    nodeRDD.foreachPartition(prepare_func(notebook, server_addr))
+    rdd_thread = threading.Thread(target=wait_on_executors, args=(nodeRDD, notebook, server_addr,))
+    rdd_thread.start()
 
-    while not server.reservations.done():
-        print("Remaining reservations: ", server.reservations.remaining())
-        time.sleep(5)
-
-    clusterspec = server.reservations.get()  # server.await_reservations()
+    clusterspec = server.await_reservations()
 
     hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, param_string='Horovod',
                                                                       type='dist')
@@ -69,12 +78,8 @@ def launch(spark_session, notebook, args):
     mpi_cmd = mpi_service.MPIRunCmd(app_id, os.environ['HADOOP_USER_NAME'], get_num_ps(clusterspec), exec_mem,
                                     envs=envs, nodes=nodes)
     mpi = mpi_service.MPIService()
-    try:
-        mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
-    except:
-        print("mpirun interrupted.")
-        status = mpi.stop_mpi_job()
-        print("kill mpirun process received: ", status)
+    mpi.mpirun_and_wait(payload=mpi_cmd, stdout=sys.stdout, stderr=sys.stderr)
+
     exit_code = mpi.get_exit_code()
 
     server.reservations.set_finished()
@@ -85,19 +90,24 @@ def launch(spark_session, notebook, args):
         if exit_code < 0:
             print("Failed to get exit code.")
         elif exit_code > 0:
-            log = mpi.get_saved_log()
-            raise Exception("mpirun FAILED, look in the logs for the full error \n", log)
+            raise Exception("mpirun FAILED, look in the logs for the full error \n")
     except ValueError:
         print(exit_code)
 
+    rdd_thread.do_run = False
+    rdd_thread.join()
     print('Finished TensorFlow job \n')
-    print(mpi.get_saved_log())
-    print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for logfile and TensorBoard logdir')
+    print('Make sure to check /Logs/TensorFlow/' + app_id + '/runId.' + str(run_id) + ' for full log and TensorBoard '
+                                                                                      'log dir')
 
 
 def get_logdir(app_id):
     global run_id
     return hopshdfs.project_path() + '/Logs/TensorFlow/' + app_id + '/horovod/run.' + str(run_id)
+
+
+def wait_on_executors(node_rdd, notebook, server_addr):
+    node_rdd.foreachPartition(prepare_func(notebook, server_addr))
 
 
 def prepare_func(nb_path, server_addr):
