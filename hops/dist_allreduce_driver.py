@@ -28,7 +28,7 @@ def sigint_handler(sig, frame):
         print("kill mpirun process received: ", status)
 
 
-signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGTERM, sigint_handler)
 
 
 def launch(spark_session, notebook, args):
