@@ -75,6 +75,7 @@ def get_logdir(app_id):
 def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
 
     def _wrapper_fun(iter):
+        global mpi
 
         for i in iter:
             executor_num = i
