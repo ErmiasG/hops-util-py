@@ -104,8 +104,7 @@ def prepare_func(app_id, exec_mem, run_id, nb_path, server_addr, args):
         if not executor_num == 0:
             client.await_mpirun_finished()
         else:
-            hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, param_string='Horovod',
-                                                                              type='dist')
+            hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, None, 'horovod')
             tb_hdfs_path, _, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
 
             program = os.environ['PYSPARK_PYTHON']
