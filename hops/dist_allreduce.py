@@ -9,6 +9,8 @@ import stat
 import sys
 import threading
 import socket
+import signal
+import atexit
 
 from hops import hdfs as hopshdfs
 from hops import tensorboard
@@ -17,6 +19,19 @@ from hops import coordination_server
 from hops import mpi_service
 
 run_id = 0
+mpi = None
+
+
+def handle_exit(sig, frame):
+    print('Interrupted', sig)
+    if mpi is not None and hasattr(mpi, 'stop_mpi_job'):
+        status = mpi.stop_mpi_job()
+        print("kill mpirun process received: ", status)
+
+
+atexit.register(handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
+signal.signal(signal.SIGINT, handle_exit)
 
 
 def launch(spark_session, notebook, args):
