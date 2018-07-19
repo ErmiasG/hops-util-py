@@ -6,6 +6,8 @@ import requests
 import json
 import time
 import os
+import signal
+import atexit
 
 try:
     from urlparse import urlparse
@@ -52,6 +54,11 @@ class MPIService:
         elif token is not None:
             self.headers = {'Authorization': token}
 
+    def handle_exit(self):
+        print('Interrupted')
+        status = self.stop_mpi_job()
+        print("kill mpirun process received: ", status)
+
     def get_session(self):
         s = requests.Session()
         return s
@@ -65,6 +72,10 @@ class MPIService:
         with requests.Session() as session:
             self.pid = self.mpirun_(self._base_url, session, payload.toJSON(), headers=self.headers,
                                     cookies=self.cookies)
+
+        atexit.register(self.handle_exit)
+        signal.signal(signal.SIGTERM, self.handle_exit)
+        signal.signal(signal.SIGINT, self.handle_exit)
         return self.pid
 
     @staticmethod
