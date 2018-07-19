@@ -23,6 +23,7 @@ mpi = None
 
 
 def handle_exit():
+    global mpi
     print('Interrupted')
     if mpi is not None and hasattr(mpi, 'stop_mpi_job'):
         status = mpi.stop_mpi_job()
@@ -42,6 +43,7 @@ def launch(spark_session, notebook, args):
       :args: Program arguments given as list
     """
     global run_id
+    global mpi
 
     print('\nStarting TensorFlow job, follow your progress on TensorBoard in Jupyter UI! \n')
     sys.stdout.flush()

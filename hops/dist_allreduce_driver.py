@@ -23,6 +23,7 @@ mpi = None
 
 
 def handle_exit():
+    global mpi
     print('Interrupted')
     if mpi is not None and hasattr(mpi, 'stop_mpi_job'):
         status = mpi.stop_mpi_job()
