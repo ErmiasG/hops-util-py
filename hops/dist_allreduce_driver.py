@@ -22,8 +22,8 @@ run_id = 0
 mpi = None
 
 
-def handle_exit(sig, frame):
-    print('Interrupted', sig)
+def handle_exit():
+    print('Interrupted')
     if mpi is not None and hasattr(mpi, 'stop_mpi_job'):
         status = mpi.stop_mpi_job()
         print("kill mpirun process received: ", status)
