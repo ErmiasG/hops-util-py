@@ -83,7 +83,7 @@ class MPIService:
         session.headers.update({'Content-type': 'application/json'})
         url = base_url + '/jobs'
         response = session.post(url, headers=headers, cookies=cookies, data=payload)
-        return MPIService.handel_response(response)
+        return MPIService.handle_response(response)
 
     def stop_mpi_job(self):
         with requests.Session() as session:
@@ -95,7 +95,7 @@ class MPIService:
     def stop_mpi_job_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid)
         response = session.delete(url, headers=headers, cookies=cookies)
-        return MPIService.handel_response(response)
+        return MPIService.handle_response(response)
 
     def get_log(self, log_type='stdout', offset=0, length=-1):
         with requests.Session() as session:
@@ -108,7 +108,7 @@ class MPIService:
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/log?' + 'type=' + log_type + '&offset=' + str(offset) + \
               '&length=' + str(length)
         response = session.get(url, headers=headers, cookies=cookies)
-        return MPIService.handel_response(response)
+        return MPIService.handle_response(response)
 
     def get_status(self):
         with requests.Session() as session:
@@ -120,7 +120,7 @@ class MPIService:
     def get_status_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/status'
         response = session.get(url, headers=headers, cookies=cookies)
-        return MPIService.handel_response(response)
+        return MPIService.handle_response(response)
 
     def get_exit_code(self):
         with requests.Session() as session:
@@ -131,7 +131,7 @@ class MPIService:
     def get_exit_code_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/exit-code'
         response = session.get(url, headers=headers, cookies=cookies)
-        return MPIService.handel_response(response)
+        return MPIService.handle_response(response)
 
     def mpi_top(self):
         with requests.Session() as session:
@@ -143,7 +143,7 @@ class MPIService:
     def mpi_top_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/mpi-top'
         response = session.get(url, headers=headers, cookies=cookies)
-        return MPIService.handel_response(response)
+        return MPIService.handle_response(response)
 
     def is_done(self):
         return self.get_status() in STOP_STATES
@@ -183,7 +183,7 @@ class MPIService:
         self.write_log(stdout=stdout, stderr=stderr)
 
     @staticmethod
-    def handel_response(response):
+    def handle_response(response):
         response.raise_for_status()
         content = response.content
         return content.decode("utf-8")
