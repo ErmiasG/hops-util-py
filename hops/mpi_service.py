@@ -3,6 +3,8 @@ MPI service helper classes that can be used to spawn mpi processes and retrieve 
 """
 
 import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 import json
 import time
 import os
