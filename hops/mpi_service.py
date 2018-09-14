@@ -20,7 +20,7 @@ NO_LOG = 'No log found for appid.'
 
 if 'REST_ENDPOINT' not in os.environ:
     raise EnvironmentError('Environment variable REST_ENDPOINT not set.')
-MPI_REST_ENDPOINT = os.environ['REST_ENDPOINT'] + '/mpi-service'
+MPI_REST_ENDPOINT = os.environ['REST_ENDPOINT'] + '/hopsworks-mpi'
 
 try:
     url_ = urlparse(MPI_REST_ENDPOINT)
