@@ -30,13 +30,13 @@ except:
 if not url_.netloc:
     raise EnvironmentError('Malformed url: ' + MPI_REST_ENDPOINT)
 
-if 'SSL_ENABLED' not in os.environ:
-    os.environ['SSL_ENABLED'] = 'false'
+#if 'SSL_ENABLED' not in os.environ:
+#    os.environ['SSL_ENABLED'] = 'false'
 
-if os.environ['SSL_ENABLED'] == 'true' and url_.scheme != 'https':
-    MPI_REST_ENDPOINT = 'https://' + url_.netloc + url_.path
-elif os.environ['SSL_ENABLED'] == 'false' and url_.scheme != 'http':
-    MPI_REST_ENDPOINT = 'http://' + url_.netloc + url_.path
+#if os.environ['SSL_ENABLED'] == 'true' and url_.scheme != 'https':
+#    MPI_REST_ENDPOINT = 'https://' + url_.netloc + url_.path
+#elif os.environ['SSL_ENABLED'] == 'false' and url_.scheme != 'http':
+#    MPI_REST_ENDPOINT = 'http://' + url_.netloc + url_.path
 
 
 class MPIService:
@@ -82,6 +82,8 @@ class MPIService:
     def mpirun_(base_url, session, payload, headers={}, cookies={}):
         session.headers.update({'Content-type': 'application/json'})
         url = base_url + '/jobs'
+        if url_.scheme == 'https':
+            session.verify = False
         response = session.post(url, headers=headers, cookies=cookies, data=payload)
         return MPIService.handle_response(response)
 
@@ -94,6 +96,8 @@ class MPIService:
     @staticmethod
     def stop_mpi_job_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid)
+        if url_.scheme == 'https':
+            session.verify = False
         response = session.delete(url, headers=headers, cookies=cookies)
         return MPIService.handle_response(response)
 
@@ -107,6 +111,8 @@ class MPIService:
     def get_log_(base_url, session, appid, pid, log_type='stdout', offset=0, length=-1, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/log?' + 'type=' + log_type + '&offset=' + str(offset) + \
               '&length=' + str(length)
+        if url_.scheme == 'https':
+            session.verify = False
         response = session.get(url, headers=headers, cookies=cookies)
         return MPIService.handle_response(response)
 
@@ -119,6 +125,8 @@ class MPIService:
     @staticmethod
     def get_status_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/status'
+        if url_.scheme == 'https':
+            session.verify = False
         response = session.get(url, headers=headers, cookies=cookies)
         return MPIService.handle_response(response)
 
@@ -130,6 +138,8 @@ class MPIService:
     @staticmethod
     def get_exit_code_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/exit-code'
+        if url_.scheme == 'https':
+            session.verify = False
         response = session.get(url, headers=headers, cookies=cookies)
         return MPIService.handle_response(response)
 
@@ -142,6 +152,8 @@ class MPIService:
     @staticmethod
     def mpi_top_(base_url, session, appid, pid, headers={}, cookies={}):
         url = base_url + '/jobs/' + appid + '/' + str(pid) + '/mpi-top'
+        if url_.scheme == 'https':
+            session.verify = False
         response = session.get(url, headers=headers, cookies=cookies)
         return MPIService.handle_response(response)
 
