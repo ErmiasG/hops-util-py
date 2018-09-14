@@ -51,7 +51,7 @@ def launch(spark_session, notebook, args):
     clusterspec = server.await_reservations()
 
     hdfs_exec_logdir, hdfs_appid_logdir = hopshdfs.create_directories(app_id, run_id, None, 'horovod')
-    tb_hdfs_path, _, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
+    tb_hdfs_path, tb_pid = tensorboard.register(hdfs_exec_logdir, hdfs_appid_logdir, 0)
 
     program = os.environ['PYSPARK_PYTHON']
     envs = {"HOROVOD_TIMELINE": tensorboard.logdir() + '/timeline.json',
